@@ -152,12 +152,12 @@ const API_SITES = {
     //     name: 'lsb资源',
     //     adult: true
     // },
-    // huangcang: {
-    //     api: 'https://hsckzy.vip',
-    //     name: '黄色仓库',
-    //     adult: true,
-    //     detail: 'https://hsckzy.vip'
-    // },
+    huangcang: {
+        api: 'https://hsckzy.vip'，
+        name: '黄色仓库',
+        adult: true,
+        detail: 'https://hsckzy.vip'
+    },
     // yutu: {
     //     api: 'https://yutuzy10.com',
     //     name: '玉兔资源',
