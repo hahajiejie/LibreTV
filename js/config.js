@@ -110,8 +110,8 @@ const API_SITES = {
         name: 'iKun资源'
     },
     huangcang: {
-        api: 'https://hsckzy.vip'，
-        name: '黄色仓库',
+        api: 'https://hsckzy.vip',
+        name: '黄仓',
         detail: 'https://hsckzy.vip'
     },
     testSource: {
