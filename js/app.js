@@ -484,21 +484,9 @@ function toggleSettings(e) {
     const settingsPanel = document.getElementById('settingsPanel');
     if (!settingsPanel) return;
 
-    // 检查是否有管理员密码
-    const hasAdminPassword = window.__ENV__?.ADMINPASSWORD && 
-                           window.__ENV__.ADMINPASSWORD.length === 64 && 
-                           !/^0+$/.test(window.__ENV__.ADMINPASSWORD);
-
     if (settingsPanel.classList.contains('show')) {
         settingsPanel.classList.remove('show');
     } else {
-        // 只有设置了管理员密码且未验证时才拦截
-        if (hasAdminPassword && !isAdminVerified()) {
-            e.preventDefault();
-            e.stopPropagation();
-            showAdminPasswordModal();
-            return;
-        }
         settingsPanel.classList.add('show');
     }
 
@@ -617,12 +605,22 @@ function getCustomApiInfo(customApiIndex) {
 
 // 搜索功能 - 修改为支持多选API和多页结果
 async function search() {
-    // 密码保护校验
-    if (window.isPasswordProtected && window.isPasswordVerified) {
-        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-            showPasswordModal && showPasswordModal();
-            return;
+    // 强化的密码保护校验 - 防止绕过
+    try {
+        if (window.ensurePasswordProtection) {
+            window.ensurePasswordProtection();
+        } else {
+            // 兼容性检查
+            if (window.isPasswordProtected && window.isPasswordVerified) {
+                if (window.isPasswordProtected() && !window.isPasswordVerified()) {
+                    showPasswordModal && showPasswordModal();
+                    return;
+                }
+            }
         }
+    } catch (error) {
+        console.warn('Password protection check failed:', error.message);
+        return;
     }
     const query = document.getElementById('searchInput').value.trim();
 
@@ -656,6 +654,16 @@ async function search() {
             if (Array.isArray(results) && results.length > 0) {
                 allResults = allResults.concat(results);
             }
+        });
+
+        // 对搜索结果进行排序：按名称优先，名称相同时按接口源排序
+        allResults.sort((a, b) => {
+            // 首先按照视频名称排序
+            const nameCompare = (a.vod_name || '').localeCompare(b.vod_name || '');
+            if (nameCompare !== 0) return nameCompare;
+            
+            // 如果名称相同，则按照来源排序
+            return (a.source_name || '').localeCompare(b.source_name || '');
         });
 
         // 更新搜索结果计数

@@ -8,7 +8,7 @@
 
 ## 📺 项目简介
 
-LibreTV 是一个轻量级、免费的在线视频搜索与观看平台，提供来自多个视频源的内容搜索与播放服务。无需注册，即开即用，支持多种设备访问。项目结合了前端技术和后端代理功能，可部署在支持服务端功能的各类网站托管服务上。
+LibreTV 是一个轻量级、免费的在线视频搜索与观看平台，提供来自多个视频源的内容搜索与播放服务。无需注册，即开即用，支持多种设备访问。项目结合了前端技术和后端代理功能，可部署在支持服务端功能的各类网站托管服务上。**项目门户**： [libretv.is-an.org](https://libretv.is-an.org)
 
 本项目基于 [bestK/tv](https://github.com/bestK/tv) 进行重构与增强。
 
@@ -17,43 +17,22 @@ LibreTV 是一个轻量级、免费的在线视频搜索与观看平台，提供
   <img src="https://github.com/user-attachments/assets/df485345-e83b-4564-adf7-0680be92d3c7" alt="项目截图" style="max-width:600px">
 </details>
 
-## 🥇 感谢赞助
-
-- **[YXVM](https://yxvm.com)**  
-- **[ZMTO/VTEXS](https://zmto.com)**
-
 ## 🚀 快速部署
 
 选择以下任一平台，点击一键部署按钮，即可快速创建自己的 LibreTV 实例：
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLibreSpark%2FLibreTV)  
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LibreSpark/LibreTV)  
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/LibreSpark/LibreTV) 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/LibreSpark/LibreTV)
 
-## ⚠️ 安全与隐私提醒
+## 🚨 重要声明
 
-### 🔒 强烈建议设置密码保护
-
-为了您的安全和避免潜在的法律风险，我们**强烈建议**在部署时设置密码保护：
-
-- **避免公开访问**：不设置密码的实例任何人都可以访问，可能被恶意利用
-- **防范版权风险**：公开的视频搜索服务可能面临版权方的投诉举报
-- **保护个人隐私**：设置密码可以限制访问范围，保护您的使用记录
-
-### 📝 部署建议
-
-1. **设置环境变量 `PASSWORD`**：为您的实例设置一个强密码
-2. **仅供个人使用**：请勿将您的实例链接公开分享或传播
-3. **遵守当地法律**：请确保您的使用行为符合当地法律法规
-
-### 🚨 重要声明
-
-- 本项目仅供学习和个人使用
+- 本项目仅供学习和个人使用，为避免版权纠纷，必须设置PASSWORD环境变量
 - 请勿将部署的实例用于商业用途或公开服务
 - 如因公开分享导致的任何法律问题，用户需自行承担责任
 - 项目开发者不对用户的使用行为承担任何法律责任
 
-## ⚠️ 请勿使用 Pull Bot 自动同步
+## ⚠️ 同步与升级
 
 Pull Bot 会反复触发无效的 PR 和垃圾邮件，严重干扰项目维护。作者可能会直接拉黑所有 Pull Bot 自动发起的同步请求的仓库所有者。
 
@@ -62,6 +41,8 @@ Pull Bot 会反复触发无效的 PR 和垃圾邮件，严重干扰项目维护�
 建议在 fork 的仓库中启用本仓库自带的 GitHub Actions 自动同步功能（见 `.github/workflows/sync.yml`）。 
 
 如需手动同步主仓库更新，也可以使用 GitHub 官方的 [Sync fork](https://docs.github.com/cn/github/collaborating-with-issues-and-pull-requests/syncing-a-fork) 功能。
+
+对于更新后可能会出现的错误和异常，在设置中备份配置后，首先清除页面Cookie，然后 Ctrl + F5 刷新页面。再次访问网页检查是否解决问题。
 
 
 ## 📋 详细部署指南
@@ -74,19 +55,17 @@ Pull Bot 会反复触发无效的 PR 和垃圾邮件，严重干扰项目维护�
 4. 使用以下设置：
    - 构建命令：留空（无需构建）
    - 输出目录：留空（默认为根目录）
-5. **⚠️ 重要：在"设置" > "环境变量"中添加 `PASSWORD` 变量**
-6. **可选：在"Settings" > "Environment Variables"中添加 `ADMINPASSWORD` 变量**
-7. 点击"保存并部署"
+5. **⚠️ 重要：在"设置" > "环境变量"中添加 `PASSWORD` 变量（必须设置）**
+6. 点击"保存并部署"
 
 ### Vercel
 
 1. Fork 或克隆本仓库到您的 GitHub/GitLab 账户
 2. 登录 [Vercel](https://vercel.com/)，点击"New Project"
 3. 导入您的仓库，使用默认设置
-4. **⚠️ 重要：在"Settings" > "Environment Variables"中添加 `PASSWORD` 变量**
-5. **可选：在"Settings" > "Environment Variables"中添加 `ADMINPASSWORD` 变量**
-6. 点击"Deploy"
-7. 可选：在"Settings" > "Environment Variables"中配置密码保护和设置按钮密码保护
+4. **⚠️ 重要：在"Settings" > "Environment Variables"中添加 `PASSWORD` 变量（必须设置）**
+5. 点击"Deploy"
+
 
 ### Docker
 ```
@@ -95,7 +74,6 @@ docker run -d \
   --restart unless-stopped \
   -p 8899:8080 \
   -e PASSWORD=your_password \
-  -e ADMINPASSWORD=your_adminpassword \
   bestzwei/libretv:latest
 ```
 
@@ -111,8 +89,7 @@ services:
     ports:
       - "8899:8080" # 将内部 8080 端口映射到主机的 8899 端口
     environment:
-      - PASSWORD=${PASSWORD:-your_password} # 可将 your_password 修改为你想要的密码，默认为 your_password
-      - ADMINPASSWORD=${PASSWORD:-your_adminpassword} # 可将 your_adminpassword 修改为你想要的密码，默认为 your_adminpassword
+      - PASSWORD=${PASSWORD:-111111} # 可将 111111 修改为你想要的密码，默认为 your_password
     restart: unless-stopped
 ```
 启动 LibreTV：
@@ -145,22 +122,8 @@ npm run dev
 
 ### 密码保护
 
-要为您的 LibreTV 实例添加密码保护，可以在部署平台上设置环境变量：
+**重要提示**: 为确保安全，所有部署都必须设置 PASSWORD 环境变量，否则用户将看到设置密码的提示。
 
-**环境变量名**: `PASSWORD` 
-**值**: 您想设置的密码
-
-**环境变量名**: `ADMINPASSWORD` 
-**值**: 您想设置的密码
-
-各平台设置方法：
-
-- **Cloudflare Pages**: Dashboard > 您的项目 > 设置 > 环境变量
-- **Vercel**: Dashboard > 您的项目 > Settings > Environment Variables
-- **Netlify**: Dashboard > 您的项目 > Site settings > Build & deploy > Environment
-- **Docker**: 修改 `docker run` 中 `your_password` 为你的密码
-- **Docker Compose**: 修改 `docker-compose.yml` 中的 `your_password` 为你的密码
-- **本地开发**: SET PASSWORD=your_password
 
 ### API兼容性
 
@@ -199,8 +162,15 @@ LibreTV 仅作为视频搜索工具，不存储、上传或分发任何视频内
 
 本项目开发者不对使用本项目产生的任何后果负责。使用本项目时，您必须遵守当地的法律法规。
 
-## 💝 支持项目
+## 🤝 衍生项目
 
-如果您想支持本项目，可以考虑进行捐款：
+它们提供了更多丰富的自定义功能，欢迎体验~
 
-[![捐赠](https://img.shields.io/badge/爱心捐赠-无国界医生-1a85ff?style=for-the-badge&logo=medical-cross)](https://www.msf.hk/zh-hant/donate/general?type=one-off)
+- **[MoonTV](https://github.com/senshinya/MoonTV)**  
+- **[OrionTV](https://github.com/zimplexing/OrionTV)**  
+
+## 🥇 感谢支持
+
+- **[Sharon](https://sharon.io)**
+- **[ZMTO](https://zmto.com)**
+- **[YXVM](https://yxvm.com)**  
