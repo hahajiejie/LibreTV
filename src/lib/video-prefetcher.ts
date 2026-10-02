@@ -55,6 +55,8 @@ interface RunDescriptor {
 
 /** 前向余量：正在跑的窗口距播放位置还有 60s 以上时，ensure 不重建 */
 const FORWARD_MARGIN_SECONDS = 60;
+/** parsing 期间视为「锚点未变」的容差：恢复进度等场景下 seek 目标与读到的播放头会差一点 */
+const ANCHOR_EPSILON_SECONDS = 1;
 const LOOK_BEHIND_SECONDS_DEFAULT = 30;
 /** 时长缺失时的兜底窗口（分片数） */
 const FALLBACK_MAX_SEGMENTS = 200;
@@ -121,21 +123,28 @@ export class VideoPrefetcher {
     const horizon = options.horizonSeconds ?? settings.horizonSeconds;
     const descriptor: RunDescriptor = { m3u8Url: options.m3u8Url, episodeKey: options.episodeKey, horizonSeconds: horizon };
 
-    // 幂等判断：
-    // - running：同一集且窗口覆盖足够 → 不打断；
-    // - parsing：窗口尚未可知，同 descriptor 直接复用——否则「MANIFEST_PARSED
-    //   起跑 + 恢复 seek 立即第二次 ensure」会 abort 刚起跑的运行，白扔一次
-    //   m3u8 拉取与解析（窗口若未覆盖新锚点，由后续触发按 running 规则重建）。
-    const reusable =
-      (this.stats.state === 'running' || this.stats.state === 'parsing') &&
-      this.descriptor &&
+    // 幂等判断：先确认是同一个运行（同集、同清单、同窗口长度），再看窗口罩不罩得住新锚点。
+    // - parsing：窗口还没算出来，无从判断覆盖——只在锚点基本没变时复用，省掉「刚起跑
+    //   就被第二次 ensure abort」那次白扔的拉取与解析；锚点变了必须重建，否则会一直
+    //   把窗口算在旧位置上，直到队列耗尽才有机会纠正；
+    // - running：窗口已知，按**本次传入**的播放头判断前向余量。这里不能用
+    //   this.currentTime——它只在 run() 里赋过一次值，播放头跑出去后仍按建窗时的
+    //   位置判定，会一路误判「还够用」而不再重建。
+    const sameRun =
+      !!this.descriptor &&
       this.descriptor.m3u8Url === descriptor.m3u8Url &&
       this.descriptor.episodeKey === descriptor.episodeKey &&
       this.descriptor.horizonSeconds === descriptor.horizonSeconds;
-    if (reusable) {
-      if (this.stats.state === 'parsing') return;
+    if (sameRun) {
       if (
-        this.currentTime + FORWARD_MARGIN_SECONDS < this.windowToTime &&
+        this.stats.state === 'parsing' &&
+        Math.abs(options.currentTime - this.currentTime) < ANCHOR_EPSILON_SECONDS
+      ) {
+        return;
+      }
+      if (
+        this.stats.state === 'running' &&
+        options.currentTime + FORWARD_MARGIN_SECONDS < this.windowToTime &&
         options.currentTime >= this.windowFromTime
       ) {
         return;

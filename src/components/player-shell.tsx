@@ -85,6 +85,8 @@ export function PlayerShell({
   const videoErrorRetryUsedRef = useRef(false);
   // 进度恢复每集只执行一次（MANIFEST_PARSED 可能因代理回退再次触发）
   const restoredRef = useRef(false);
+  // timeupdate 续跑预取的游标：必须按集清零，否则会沿用上一集的时间戳推迟首次续跑
+  const lastPrefetchEnsureRef = useRef(0);
   // setupHls 可能改走代理形式，video:error 重试要用最近一次的地址
   const currentMediaUrlRef = useRef(url);
   // 本集的恢复策略实例：跨直连/代理两级重建共享计数
@@ -162,8 +164,11 @@ export function PlayerShell({
 
     hls.on(Hls.Events.MANIFEST_PARSED, async () => {
       recoveryRef.current?.markHealthy();
+      // 预取锚点：恢复进度时直接取恢复目标。赋值后 video.currentTime 未必立刻反映
+      // （Safari 系），而 ensure 是以「锚点未变」为前提复用 parsing 中的运行的——
+      // 这里读到旧值会把窗口建在片头，且白等一次纠错重建。
+      let prefetchAnchor = video.currentTime;
       // 进度恢复（每集一次）：优先 URL position，其次 IndexedDB 记录
-      let restoreSeekPending = false;
       if (!restoredRef.current) {
         restoredRef.current = true;
         try {
@@ -171,17 +176,13 @@ export function PlayerShell({
           const duration = artRef.current?.duration || 0;
           if (saved > 10 && duration > 0 && saved < duration - 2) {
             if (artRef.current) artRef.current.currentTime = saved;
-            // Safari 系此刻 video.currentTime 未必已反映赋值，预取锚点会短暂
-            // 落在 0——交给紧随的 video:seeked 事件以恢复后的锚点触发预取
-            restoreSeekPending = true;
+            prefetchAnchor = saved;
             showHint(`已从 ${formatTime(saved)} 继续播放`);
           }
         } catch { /* 忽略恢复失败 */ }
       }
-      // 新集立即预取（否则要等 timeupdate 的 30s 节流，起播初期无缓存）；
-      // 有恢复 seek 待执行时跳过：seeked 事件带着恢复后的锚点触发预取，
-      // 避免 parsing 中被第二次 ensure abort 白扔一次拉取与解析
-      if (!restoreSeekPending) ensurePrefetch(mediaUrl, video.currentTime);
+      // 新集立即预取（否则要等 timeupdate 的 30s 节流，起播初期无缓存）
+      ensurePrefetch(mediaUrl, prefetchAnchor);
       video.play().catch(() => {});
     });
     // 播放链路恢复（FRAG_LOADED / MANIFEST_PARSED）：静默窗外清零连续失败计数
@@ -244,6 +245,7 @@ export function PlayerShell({
     playbackStartedRef.current = false;
     videoErrorRetryUsedRef.current = false;
     restoredRef.current = false;
+    lastPrefetchEnsureRef.current = 0;
     recoveryRef.current = new PlaybackRecovery();
     // 换集时清掉上一集的预取窗口，避免带宽被旧集占用
     getVideoPrefetcher().stop();
@@ -268,7 +270,6 @@ export function PlayerShell({
     endedRef.current = false;
 
     let lastSave = 0;
-    let lastPrefetchEnsure = 0;
 
     const art = new Artplayer({
       container: containerRef.current,
@@ -334,8 +335,8 @@ export function PlayerShell({
         propsRef.current.onTimeUpdate?.(art.currentTime, art.duration);
       }
       // 每 30s 续跑一次前向预取窗口（ensure 幂等，窗口未覆盖足够余量才会重建）
-      if (now - lastPrefetchEnsure > 30_000) {
-        lastPrefetchEnsure = now;
+      if (now - lastPrefetchEnsureRef.current > 30_000) {
+        lastPrefetchEnsureRef.current = now;
         // 用 currentMediaUrlRef（代理回退后的实际地址）：否则预取的 key 与
         // loader 读取的 key 不一致，缓存永不命中且直连 fetch 白耗流量
         ensurePrefetch(currentMediaUrlRef.current, art.currentTime);
