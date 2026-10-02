@@ -428,10 +428,14 @@ export function PlayerShell({
     const onTouchMove = (e: TouchEvent) => {
       if (isLongPress) e.preventDefault();
     };
+    // ArtPlayer 的 contextmenu 组件只在桌面端初始化（移动端构造函数里跳过 init），
+    // 长按倍速因而会连带呼出系统原生菜单/气泡。播放器表面没有可用的原生菜单，统一抑制
+    const onContextMenu = (e: Event) => e.preventDefault();
     el?.addEventListener('touchstart', onTouchStart, { passive: false });
     el?.addEventListener('touchend', onTouchEnd);
     el?.addEventListener('touchcancel', onTouchEnd);
     el?.addEventListener('touchmove', onTouchMove, { passive: false });
+    el?.addEventListener('contextmenu', onContextMenu);
 
     // 卸载与页面隐藏时保存进度
     const saveOnHide = () => {
@@ -456,6 +460,7 @@ export function PlayerShell({
       el?.removeEventListener('touchend', onTouchEnd);
       el?.removeEventListener('touchcancel', onTouchEnd);
       el?.removeEventListener('touchmove', onTouchMove);
+      el?.removeEventListener('contextmenu', onContextMenu);
       hlsRef.current?.destroy();
       hlsRef.current = null;
       recoveryRef.current?.dispose();
@@ -488,7 +493,7 @@ export function PlayerShell({
 
   return (
     <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
+      <div ref={containerRef} className="w-full h-full" style={{ WebkitTouchCallout: 'none' }} />
       {showPoster && !error && (
         <div
           className="absolute inset-0 bg-black pointer-events-none"
