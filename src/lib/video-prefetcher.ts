@@ -84,13 +84,13 @@ export function computeWindow(
   const total = durations.reduce((s, d) => s + d, 0);
   const cur = Math.max(0, Math.min(currentTime, total));
   const fromIdx = indexAtTime(durations, Math.max(0, cur - lookBehindSeconds));
-  if (horizonSeconds <= 0 || total === 0) {
-    return { fromIdx, toIdx: durations.length };
+  // 时长数据不可信（全 0，累计时长恒为 0）时按数量兜底，避免无限窗口
+  if (total === 0) {
+    return { fromIdx, toIdx: Math.min(durations.length, fromIdx + FALLBACK_MAX_SEGMENTS) };
   }
+  if (horizonSeconds <= 0) return { fromIdx, toIdx: durations.length };
   const toTime = Math.min(total, cur + horizonSeconds);
   const toIdx = Math.min(durations.length, indexAtTime(durations, toTime) + 1);
-  // 时长数据不可信（全 0）时退化为按数量兜底
-  if (total === 0) return { fromIdx, toIdx: Math.min(durations.length, fromIdx + FALLBACK_MAX_SEGMENTS) };
   return { fromIdx, toIdx };
 }
 
@@ -121,17 +121,25 @@ export class VideoPrefetcher {
     const horizon = options.horizonSeconds ?? settings.horizonSeconds;
     const descriptor: RunDescriptor = { m3u8Url: options.m3u8Url, episodeKey: options.episodeKey, horizonSeconds: horizon };
 
-    // 幂等判断：同一集、同一窗口覆盖足够 → 不打断
-    if (
-      this.stats.state === 'running' &&
+    // 幂等判断：
+    // - running：同一集且窗口覆盖足够 → 不打断；
+    // - parsing：窗口尚未可知，同 descriptor 直接复用——否则「MANIFEST_PARSED
+    //   起跑 + 恢复 seek 立即第二次 ensure」会 abort 刚起跑的运行，白扔一次
+    //   m3u8 拉取与解析（窗口若未覆盖新锚点，由后续触发按 running 规则重建）。
+    const reusable =
+      (this.stats.state === 'running' || this.stats.state === 'parsing') &&
       this.descriptor &&
       this.descriptor.m3u8Url === descriptor.m3u8Url &&
       this.descriptor.episodeKey === descriptor.episodeKey &&
-      this.descriptor.horizonSeconds === descriptor.horizonSeconds &&
-      this.currentTime + FORWARD_MARGIN_SECONDS < this.windowToTime &&
-      options.currentTime >= this.windowFromTime
-    ) {
-      return;
+      this.descriptor.horizonSeconds === descriptor.horizonSeconds;
+    if (reusable) {
+      if (this.stats.state === 'parsing') return;
+      if (
+        this.currentTime + FORWARD_MARGIN_SECONDS < this.windowToTime &&
+        options.currentTime >= this.windowFromTime
+      ) {
+        return;
+      }
     }
 
     void this.run(options, settings, descriptor);

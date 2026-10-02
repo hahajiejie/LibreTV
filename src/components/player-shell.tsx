@@ -163,6 +163,7 @@ export function PlayerShell({
     hls.on(Hls.Events.MANIFEST_PARSED, async () => {
       recoveryRef.current?.markHealthy();
       // 进度恢复（每集一次）：优先 URL position，其次 IndexedDB 记录
+      let restoreSeekPending = false;
       if (!restoredRef.current) {
         restoredRef.current = true;
         try {
@@ -170,12 +171,17 @@ export function PlayerShell({
           const duration = artRef.current?.duration || 0;
           if (saved > 10 && duration > 0 && saved < duration - 2) {
             if (artRef.current) artRef.current.currentTime = saved;
+            // Safari 系此刻 video.currentTime 未必已反映赋值，预取锚点会短暂
+            // 落在 0——交给紧随的 video:seeked 事件以恢复后的锚点触发预取
+            restoreSeekPending = true;
             showHint(`已从 ${formatTime(saved)} 继续播放`);
           }
         } catch { /* 忽略恢复失败 */ }
       }
-      // 新集立即预取（否则要等 timeupdate 的 30s 节流，起播初期无缓存）
-      ensurePrefetch(mediaUrl, video.currentTime);
+      // 新集立即预取（否则要等 timeupdate 的 30s 节流，起播初期无缓存）；
+      // 有恢复 seek 待执行时跳过：seeked 事件带着恢复后的锚点触发预取，
+      // 避免 parsing 中被第二次 ensure abort 白扔一次拉取与解析
+      if (!restoreSeekPending) ensurePrefetch(mediaUrl, video.currentTime);
       video.play().catch(() => {});
     });
     // 播放链路恢复（FRAG_LOADED / MANIFEST_PARSED）：静默窗外清零连续失败计数
