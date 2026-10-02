@@ -391,13 +391,17 @@ export function PlayerShell({
 
     const onTouchStart = (e: TouchEvent) => {
       if (art.video?.paused) return;
+      // 已有触控在处理时忽略新手指：否则第二指会把 originalRate 捕获成 3.0，
+      // 松手后倍速永久卡在 3x；旧定时器句柄也会被覆盖成无法清除的幽灵触发
+      if (isLongPress || longPressTimer) return;
+      // 控制栏 / 设置面板上的长按不触发倍速（按住进度条拖动、长按倍速菜单项会误触）
+      if ((e.target as HTMLElement).closest?.('.art-controls, .art-settings')) return;
       originalRate = art.video.playbackRate;
       longPressTimer = setTimeout(() => {
         if (art.video?.paused) return;
         art.video.playbackRate = 3.0;
         isLongPress = true;
         showHint('3 倍速');
-        e.preventDefault();
       }, 500);
     };
     const onTouchEnd = () => {
