@@ -174,6 +174,8 @@ export function PlayerShell({
           }
         } catch { /* 忽略恢复失败 */ }
       }
+      // 新集立即预取（否则要等 timeupdate 的 30s 节流，起播初期无缓存）
+      ensurePrefetch(mediaUrl, video.currentTime);
       video.play().catch(() => {});
     });
     // 播放链路恢复（FRAG_LOADED / MANIFEST_PARSED）：静默窗外清零连续失败计数
@@ -328,16 +330,20 @@ export function PlayerShell({
       // 每 30s 续跑一次前向预取窗口（ensure 幂等，窗口未覆盖足够余量才会重建）
       if (now - lastPrefetchEnsure > 30_000) {
         lastPrefetchEnsure = now;
-        ensurePrefetch(propsRef.current.url, art.currentTime);
+        // 用 currentMediaUrlRef（代理回退后的实际地址）：否则预取的 key 与
+        // loader 读取的 key 不一致，缓存永不命中且直连 fetch 白耗流量
+        ensurePrefetch(currentMediaUrlRef.current, art.currentTime);
       }
     });
     art.on('video:seeked', () => {
-      ensurePrefetch(propsRef.current.url, art.currentTime);
+      ensurePrefetch(currentMediaUrlRef.current, art.currentTime);
     });
     art.on('video:pause', () => {
       propsRef.current.onPause?.(art.currentTime, art.duration);
       // 暂停 = 预取黄金窗口：解除限速并无限铺满整集（用户主动行为，带宽占用可接受）
-      ensurePrefetch(propsRef.current.url, art.currentTime, 0);
+      // waiting 触发的限速在此解除，否则黄金窗口会被 500ms 轮询冻结
+      getVideoPrefetcher().setThrottled(false);
+      ensurePrefetch(currentMediaUrlRef.current, art.currentTime, 0);
     });
     art.on('video:waiting', () => {
       // 卡顿：预取临时让出带宽给播放
@@ -466,7 +472,10 @@ export function PlayerShell({
   const firstAdFilterRef = useRef(true);
   useEffect(() => {
     if (firstAdFilterRef.current) { firstAdFilterRef.current = false; return; }
-    if (artRef.current && hlsRef.current) loadEpisode(propsRef.current.url);
+    if (artRef.current && hlsRef.current) {
+      // 用当前实际媒体地址：代理回退生效时切广告过滤不应跳回直连形式
+      loadEpisode(currentMediaUrlRef.current || propsRef.current.url);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adFilter]);
 
